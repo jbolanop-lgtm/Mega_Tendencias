@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Megatendencias People</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: cabecera breve → barra de recorrido → mapa SVG (izq.) + panel explicativo fijo (der.), apilado en móvil */
+:root{
+  --bg:#F3F5F7; --surface:#FFFFFF; --ink:#16202A; --muted:#566271; --line:#C3CCD6;
+  --m1:#C2410C; --m1-soft:#FCE9DC; --m2:#0E7490; --m2-soft:#DCF0F4;
+  --root:#16202A; --on-root:#FFFFFF; --on-accent:#FFFFFF; --focus:#2563EB;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0F151B; --surface:#17202A; --ink:#E6EBF0; --muted:#9AA6B3; --line:#36434F;
+  --m1:#F07A3E; --m1-soft:#3B2217; --m2:#3CB4CB; --m2-soft:#11313A;
+  --root:#E6EBF0; --on-root:#0F151B; --on-accent:#0F151B; --focus:#7AA7FF; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0F151B; --surface:#17202A; --ink:#E6EBF0; --muted:#9AA6B3; --line:#36434F;
+  --m1:#F07A3E; --m1-soft:#3B2217; --m2:#3CB4CB; --m2-soft:#11313A;
+  --root:#E6EBF0; --on-root:#0F151B; --on-accent:#0F151B; --focus:#7AA7FF; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{margin:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55}
+.wrap{max-width:1380px;margin:0 auto;padding-inline:20px;padding-block:28px 40px}
+header.top{display:grid;gap:10px;max-width:74ch}
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(28px,4vw,44px);line-height:1.05;margin:0;text-wrap:balance}
+h1 em{font-style:normal;color:var(--m1)}
+.lead{margin:0;color:var(--muted);font-size:17px}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;margin-block:22px 14px}
+.group{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.group-label{font-size:13px;color:var(--muted);margin-right:4px}
+button{font:inherit;font-size:14px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 14px;line-height:1.2}
+button:hover{border-color:var(--ink)}
+button:focus-visible,.node:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.step{font-family:var(--f-mono);font-size:13px;min-width:6ch;text-align:center;font-variant-numeric:tabular-nums}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,400px);gap:20px;align-items:start}
+@media (max-width:960px){.layout{grid-template-columns:minmax(0,1fr)}}
+
+figure.map{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.map-scroll{position:relative;overflow:hidden;background:var(--surface)}
+svg{display:block;width:100%;height:auto;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+svg.zoomed{touch-action:none;cursor:grab}
+svg.dragging{cursor:grabbing}
+.zoomrow{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line)}
+.zoombar{display:flex;align-items:center;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:4px;}
+.zoombar button{width:34px;height:34px;padding:0;border-radius:50%;font-size:18px;font-weight:700;display:grid;place-items:center;border-color:transparent}
+.zoombar button.wide{width:auto;padding:0 12px;border-radius:999px;font-size:13px;font-weight:600}
+.zoombar output{font-family:var(--f-mono);font-size:12px;min-width:5ch;text-align:center;font-variant-numeric:tabular-nums;color:var(--muted)}
+.zoomhint{font-size:13px;color:var(--muted)}
+figure.map:fullscreen{border-radius:0;display:flex;flex-direction:column;background:var(--surface)}
+figure.map:fullscreen .map-scroll{flex:1;display:flex;flex-direction:column;justify-content:center}
+figure.map:fullscreen svg{max-height:100%}
+@media (max-width:600px){.zoomhint{display:none}}
+figcaption{display:flex;flex-wrap:wrap;gap:8px 18px;padding:12px 16px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.key{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:10px;border-radius:3px;display:inline-block;border:1.5px solid var(--ink)}
+.sw.root{background:var(--root);border-color:var(--root)}
+.sw.mega{background:var(--m1);border-color:var(--m1)}
+.sw.sub{background:var(--surface);border-color:var(--m2)}
+.sw.data{background:var(--m2-soft);border-color:transparent}
+.sw.cross{background:transparent;border-style:dashed;border-color:var(--muted)}
+
+/* SVG */
+.edge{fill:none;stroke:var(--line);stroke-width:1.6;transition:stroke .2s,opacity .2s}
+.edge.cross{stroke-dasharray:5 5}
+.elabel rect{fill:var(--surface)}
+.elabel text{fill:var(--muted);font:500 10.5px var(--f-mono);letter-spacing:.02em}
+.node{cursor:pointer;transition:opacity .2s}
+.node rect{transition:stroke-width .15s}
+.node text{pointer-events:none}
+.n-root rect{fill:var(--root)} .n-root text{fill:var(--on-root);font:700 18px var(--f-display)}
+.n-context rect{fill:var(--surface);stroke:var(--muted);stroke-width:1.4;stroke-dasharray:4 4} .n-context text{fill:var(--ink);font:600 12.5px var(--f-body)}
+.n-mega.m1 rect{fill:var(--m1)} .n-mega.m2 rect{fill:var(--m2)}
+.n-mega text{fill:var(--on-accent)} .n-mega .t1{font:700 16px var(--f-display)} .n-mega .t2{font:400 12.5px var(--f-body)}
+.n-sub rect{fill:var(--surface);stroke-width:2} .n-sub.m1 rect{stroke:var(--m1)} .n-sub.m2 rect{stroke:var(--m2)}
+.n-sub text{fill:var(--ink);font:600 13px var(--f-body)}
+.n-data.m1 rect{fill:var(--m1-soft)} .n-data.m2 rect{fill:var(--m2-soft)}
+.n-data text{fill:var(--ink);font:500 11.5px var(--f-mono)}
+.n-cross rect{fill:var(--surface);stroke:var(--ink);stroke-width:1.5;stroke-dasharray:6 4}
+.n-cross .t1{fill:var(--ink);font:700 14.5px var(--f-display)} .n-cross .t2{fill:var(--muted);font:400 12px var(--f-body)}
+.node:hover rect{stroke:var(--ink);stroke-width:2.5}
+.node.active rect{stroke:var(--focus);stroke-width:3.5;stroke-dasharray:none}
+svg.focusing .node{opacity:.45} svg.focusing .node.near,svg.focusing .node.active{opacity:1}
+svg.focusing .edge{opacity:.4} svg.focusing .edge.near{opacity:1;stroke:var(--ink);stroke-width:2.2}
+svg.focusing .elabel{opacity:.45} svg.focusing .elabel.near{opacity:1}
+svg.filter-m1 .node.b-m2, svg.filter-m2 .node.b-m1{opacity:.15}
+svg.filter-m1 .edge.b-m2, svg.filter-m2 .edge.b-m1, svg.filter-m1 .elabel.b-m2, svg.filter-m2 .elabel.b-m1{opacity:.12}
+
+/* Panel */
+aside.panel{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px 22px 20px;max-height:calc(100vh - 24px);overflow:auto;min-width:0}
+@media (max-width:960px){aside.panel{position:static;max-height:none}}
+.panel .kind{display:inline-block;font-family:var(--f-mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:var(--bg);color:var(--muted)}
+.panel .kind.m1{background:var(--m1-soft);color:var(--m1)} .panel .kind.m2{background:var(--m2-soft);color:var(--m2)}
+.panel h2{font-family:var(--f-display);font-size:24px;line-height:1.15;margin:10px 0 6px;text-wrap:balance}
+.panel .page{font-size:13px;color:var(--muted);margin:0 0 14px}
+.panel p{margin:0 0 12px}
+.panel h3{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:16px 0 6px}
+.panel ul{margin:0 0 12px;padding-left:20px} .panel li{margin-bottom:6px}
+.panel blockquote{margin:12px 0;padding:10px 14px;border-left:3px solid var(--line);color:var(--ink);font-style:italic;background:var(--bg);border-radius:0 8px 8px 0}
+.panel blockquote cite{display:block;font-style:normal;font-size:13px;color:var(--muted);margin-top:4px}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin:6px 0 12px}
+.stat{background:var(--bg);border-radius:10px;padding:10px}
+.stat b{display:block;font-family:var(--f-display);font-size:22px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:13px;color:var(--muted);line-height:1.3;display:block;margin-top:2px}
+.note{border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px;margin-top:14px}
+.note strong{display:block;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.links{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.links button{font-size:13px;padding:4px 11px}
+
+table.mini{border-collapse:collapse;width:100%;font-size:13.5px;margin:4px 0 12px}
+table.mini th,table.mini td{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+table.mini th{color:var(--muted);font-weight:600}
+table.mini td.num{font-variant-numeric:tabular-nums;text-align:right}
+.hl{background:var(--m1-soft);color:var(--m1);font-weight:700;padding:0 4px;border-radius:4px}
+
+footer.src{margin-top:28px;font-size:13.5px;color:var(--muted);max-width:90ch;display:grid;gap:8px}
+footer.src p{margin:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Global Megatrends 2024 · PMI · Sección 2</span>
+    <h1>Megatendencias <em>People</em>: las personas como motor del cambio positivo</h1>
+    <p class="lead">Mapa conceptual interactivo. Toca o selecciona cualquier concepto para ver su explicación, los datos que lo sustentan y cómo se conecta con los demás. Si prefieres una lectura ordenada, usa el recorrido guiado.</p>
+  </header>
+
+  <nav class="toolbar" aria-label="Controles del mapa">
+    <div class="group" role="group" aria-label="Recorrido guiado">
+      <span class="group-label">Recorrido guiado</span>
+      <button id="prev" type="button" aria-label="Concepto anterior">◀ Anterior</button>
+      <span class="step" id="step" aria-live="polite">1 / 18</span>
+      <button id="next" type="button" aria-label="Concepto siguiente">Siguiente ▶</button>
+    </div>
+    <div class="group" role="group" aria-label="Filtrar por megatendencia">
+      <span class="group-label">Resaltar</span>
+      <button type="button" class="flt" data-f="all" aria-pressed="true">Todo</button>
+      <button type="button" class="flt" data-f="m1" aria-pressed="false">2.1 Fuerza laboral resiliente</button>
+      <button type="button" class="flt" data-f="m2" aria-pressed="false">2.2 Reinvención del trabajo</button>
+    </div>
+  </nav>
+
+  <main class="layout">
+    <figure class="map">
+      <div class="map-scroll">
+        <div class="zoomrow">
+        <span class="zoomhint">Ctrl + rueda del ratón o pellizca para hacer zoom · arrastra para moverte</span>
+        <div class="zoombar" role="group" aria-label="Zoom del mapa">
+          <button type="button" id="zout" aria-label="Alejar">−</button>
+          <output id="zval" aria-live="polite">100 %</output>
+          <button type="button" id="zin" aria-label="Acercar">+</button>
+          <button type="button" id="zreset" class="wide" aria-label="Ver mapa completo">Ajustar</button>
+          <button type="button" id="zfull" class="wide" aria-label="Pantalla completa">⛶ Pantalla completa</button>
+        </div>
+        </div>
+        <svg id="map" viewBox="0 0 1200 780" role="group" aria-label="Mapa conceptual de las megatendencias People"></svg>
+      </div>
+      <figcaption>
+        <span class="key"><i class="sw root"></i>Concepto central</span>
+        <span class="key"><i class="sw mega"></i>Megatendencia</span>
+        <span class="key"><i class="sw sub"></i>Subtema</span>
+        <span class="key"><i class="sw data"></i>Dato clave</span>
+        <span class="key"><i class="sw cross"></i>Contexto y conceptos transversales</span>
+        <span class="key">Las palabras sobre las líneas son los enlaces que forman cada proposición.</span>
+      </figcaption>
+    </figure>
+
+    <aside class="panel" id="panel" aria-live="polite" aria-label="Explicación del concepto seleccionado"></aside>
+  </main>
+
+  <footer class="src">
+    <p><strong>Fuente principal:</strong> Project Management Institute (2024). <em>Global Megatrends 2024</em>, sección 2 «People: The Engine Driving Positive Change», pp. 7–12, y tabla de la introducción (p. 5). Las cifras provienen de las fuentes que cita el informe (OCDE, ONU, Foro Económico Mundial, LinkedIn, PwC, Owl Labs, PMI <em>Pulse of the Profession</em> 2024, entre otras).</p>
+    <p>Traducción y síntesis propias. Las notas «Para leer con criterio» señalan dónde un dato del informe requiere matices o contiene una imprecisión.</p>
+  </footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+const NS="http://www.w3.org/2000/svg";
+
+/* ---------- Nodos ---------- */
+const N = [
+ {id:"root",type:"root",b:"all",x:600,y:70,w:380,h:72,lines:["PEOPLE · Las personas,","motor del cambio positivo"]},
+ {id:"ctx",type:"context",b:"all",x:1030,y:70,w:240,h:60,lines:["Contexto 2024: mercados","laborales estrechos (OCDE)"]},
+ {id:"m1",type:"mega",b:"m1",x:300,y:210,w:340,h:76,lines:["2.1 Fuerza laboral resiliente","Adaptarse a las tendencias demográficas"]},
+ {id:"m2",type:"mega",b:"m2",x:900,y:210,w:340,h:76,lines:["2.2 Reinvención del lugar de trabajo","Flexibilidad que logra resultados"]},
+ {id:"a",type:"sub",b:"m1",x:110,y:380,w:176,h:86,lines:["Apoyo de industria y","gobierno para el","dividendo demográfico"]},
+ {id:"b",type:"sub",b:"m1",x:300,y:380,w:176,h:86,lines:["Tecnología e","inmigración ante una","fuerza laboral mayor"]},
+ {id:"c",type:"sub",b:"m1",x:490,y:380,w:176,h:86,lines:["Recualificación y","aprendizaje","permanente"]},
+ {id:"d",type:"sub",b:"m2",x:710,y:380,w:176,h:86,lines:["Trabajo remoto e","híbrido que logra","resultados"]},
+ {id:"e",type:"sub",b:"m2",x:900,y:380,w:176,h:86,lines:["El valor de la","felicidad en el","futuro del trabajo"]},
+ {id:"f",type:"sub",b:"m2",x:1090,y:380,w:176,h:86,lines:["Diversidad y mejores","resultados en","proyectos"]},
+ {id:"ad",type:"data",b:"m1",x:110,y:560,w:176,h:70,lines:["2050: África tendrá","1/4 de la humanidad","y 1/3 de los jóvenes"]},
+ {id:"bd",type:"data",b:"m1",x:300,y:560,w:176,h:70,lines:["≈150 M de empleos","pasarán a mayores","de 55 esta década"]},
+ {id:"cd",type:"data",b:"m1",x:490,y:560,w:176,h:70,lines:["50 % de habilidades","perdería vigencia en","2 años (IA generativa)"]},
+ {id:"dd",type:"data",b:"m2",x:710,y:560,w:176,h:70,lines:["Presencialidad ideal:","empleadores 66 %","empleados 22 %"]},
+ {id:"ed",type:"data",b:"m2",x:900,y:560,w:176,h:70,lines:["+1 unidad de","felicidad ≈ +12 %","de productividad"]},
+ {id:"fd",type:"data",b:"m2",x:1090,y:560,w:176,h:70,lines:["Propósito laboral clave:","89 % millennials","86 % generación Z"]},
+ {id:"sk",type:"cross",b:"m1",x:300,y:722,w:350,h:64,lines:["Habilidades para el futuro","Power skills · IA · habilidades verdes"]},
+ {id:"pm",type:"cross",b:"m2",x:900,y:722,w:350,h:64,lines:["Implicaciones para proyectos","El cambio se ejecuta a través de proyectos"]}
+];
+const byId = Object.fromEntries(N.map(n=>[n.id,n]));
+
+/* ---------- Enlaces (proposiciones) ---------- */
+const E = [
+ ["root","ctx","contexto","h"],
+ ["root","m1","se divide en"],["root","m2","se divide en"],
+ ["m1","a","comprende"],["m1","b","comprende"],["m1","c","comprende"],
+ ["m2","d","comprende"],["m2","e","comprende"],["m2","f","comprende"],
+ ["a","ad","dato clave"],["b","bd","dato clave"],["c","cd","dato clave"],
+ ["d","dd","dato clave"],["e","ed","dato clave"],["f","fd","dato clave"],
+ ["ad","sk","exigen","x"],["bd","sk","exigen","x"],["cd","sk","exigen","x"],
+ ["dd","pm","implican","x"],["ed","pm","implican","x"],["fd","pm","implican","x"]
+];
+
+/* ---------- Contenido explicativo ---------- */
+const C = {
+root:{kind:"Concepto central",page:"Sección 2 · p. 7",html:`
+<p>El informe parte de una idea sencilla: <strong>las personas son el activo más importante de cualquier organización</strong>. Por eso, las megatendencias de este eje describen cómo están cambiando quienes trabajan (su edad, sus habilidades, sus expectativas) y cómo deben responder empresas y gobiernos.</p>
+<h3>Qué propone el informe</h3>
+<ul>
+<li>Políticas públicas que permitan a los jóvenes adquirir las habilidades de los empleos futuros y a las personas mayores seguir activas.</li>
+<li>Para las organizaciones, la inversión principal es <strong>la formación y el desarrollo profesional</strong> de quienes ya trabajan en ellas, junto con la contratación de talento con habilidades tecnológicas (modelado de bases de datos, <em>prompt engineering</em>, diseño de interfaces).</li>
+<li>El cambio se ejecuta mediante proyectos, y su criterio rector debe ser <strong>el impacto en las personas</strong>.</li>
+</ul>
+<h3>Cómo se organiza</h3>
+<p>El eje se divide en dos megatendencias: <strong>construir una fuerza laboral resiliente</strong> (2.1) y <strong>reinventar el lugar de trabajo</strong> (2.2). Cada una agrupa tres subtemas, y cada subtema se apoya en datos concretos.</p>`,
+links:["ctx","m1","m2"]},
+
+ctx:{kind:"Contexto",page:"p. 7 y tabla de la p. 5",html:`
+<p>Según el informe de la <strong>OCDE de abril de 2024</strong> que cita el PMI, los mercados laborales se estabilizaron: la participación laboral aumentó y el desempleo se mantiene cerca de mínimos históricos, por debajo del 5 %.</p>
+<p>La otra cara es que hay <strong>pocos candidatos disponibles</strong>. Eso obliga a las empresas a esforzarse más para atraer y retener talento, y explica por qué formar a la gente que ya se tiene resulta tan estratégico.</p>
+<h3>Dónde encaja cada megatendencia</h3>
+<table class="mini"><thead><tr><th>Megatendencia</th><th>Dimensión del informe</th></tr></thead>
+<tbody><tr><td>Fuerza laboral resiliente</td><td>Transformación empresarial</td></tr>
+<tr><td>Reinvención del lugar de trabajo</td><td>Formas de trabajo</td></tr></tbody></table>
+<p>La transformación empresarial busca que la organización no solo resista los cambios, sino que aproveche nuevas oportunidades. Las formas de trabajo se refieren a cómo incorporamos herramientas e influencias nuevas a la práctica diaria.</p>`,
+links:["root","m1","m2"]},
+
+m1:{kind:"Megatendencia 2.1",cls:"m1",page:"pp. 7–9",html:`
+<p><strong>Construir una fuerza laboral resiliente</strong> significa adaptarse a las tendencias demográficas globales. Hay dos fuerzas opuestas: en buena parte de Asia y Europa la población envejece, mientras que África, América Latina e India concentran a los jóvenes.</p>
+<div class="stats">
+<div class="stat"><b>65+</b><span>Para 2050 superarán en número a los jóvenes de 15 a 24 años</span></div>
+<div class="stat"><b>≈150 M</b><span>empleos pasarán a trabajadores de 55+ antes de 2030</span></div>
+</div>
+<h3>Países con mayor proporción de población en edad de trabajar</h3>
+<table class="mini"><thead><tr><th>1990</th><th>2023</th><th>2050</th></tr></thead><tbody>
+<tr><td>Japón</td><td>Corea del Sur</td><td>Sudáfrica</td></tr>
+<tr><td>Corea del Sur</td><td>Brasil</td><td>Myanmar</td></tr>
+<tr><td>Alemania</td><td><span class="hl">Colombia</span></td><td>India</td></tr>
+<tr><td>Italia</td><td>China</td><td>Bangladés</td></tr>
+<tr><td>Rusia</td><td>Tailandia</td><td>Filipinas</td></tr></tbody></table>
+<p>Fuente del gráfico: ONU (<em>World Population Prospects</em>) y Banco Mundial; solo países con más de 50 millones de habitantes en 2023. Se muestran los cinco primeros de cada año.</p>
+<p>La lectura es clara: el «bono» de población joven se desplaza hacia el Sur global, y quien no forme a esos jóvenes desperdiciará la oportunidad.</p>`,
+links:["a","b","c","sk"]},
+
+m2:{kind:"Megatendencia 2.2",cls:"m2",page:"pp. 10–12",html:`
+<p><strong>Reinventar el lugar de trabajo</strong> consiste en ofrecer flexibilidad sin perder resultados. La pregunta ya no es solo dónde se trabaja, sino cómo lograr que la gente esté comprometida, sea feliz y encuentre sentido en lo que hace.</p>
+<h3>Cómo trabajan hoy (Remote Work Realities)</h3>
+<table class="mini"><thead><tr><th>Modalidad</th><th class="num">Todos los trabajadores</th><th class="num">Directores de proyecto</th></tr></thead><tbody>
+<tr><td>Presencial</td><td class="num">37 %</td><td class="num">39 %</td></tr>
+<tr><td>Híbrido (1–4 días en oficina)</td><td class="num">55 %</td><td class="num">44 %</td></tr>
+<tr><td>Totalmente remoto</td><td class="num">7 %</td><td class="num">17 %</td></tr></tbody></table>
+<p>Los directores de proyecto trabajan en remoto con una frecuencia más de dos veces mayor que el promedio de los trabajadores, lo que sugiere que la profesión se adapta bien a la distancia.</p>
+<p>Sus tres subtemas son el trabajo remoto e híbrido, la felicidad y la diversidad.</p>`,
+links:["d","e","f","pm"]},
+
+a:{kind:"Subtema · 2.1",cls:"m1",page:"p. 8",html:`
+<p>La demografía no se corrige sola: necesita <strong>políticas públicas y alianzas público-privadas</strong>.</p>
+<h3>Países que envejecen</h3>
+<ul>
+<li>Corea del Sur, Japón y China elevan la edad de jubilación y crean incentivos para que los mayores sigan trabajando. Los medios estatales chinos calificaron el reempleo de mayores como un problema «urgente y realista».</li>
+<li>Japón ha obtenido buenos resultados al incentivar la participación laboral de las mujeres.</li>
+<li>Australia promueve la formación continua de adultos con su <em>Adult Learners Week</em>.</li>
+<li>Grecia permitió a algunas empresas una semana laboral de seis días, una medida polémica que refleja la escasez de trabajadores en Europa.</li>
+</ul>
+<h3>Regiones jóvenes</h3>
+<ul>
+<li>Iniciativa de Google en África para que 20 000 mujeres y jóvenes nigerianos adquieran competencias digitales.</li>
+<li><strong>EquipYouth</strong> (Caterpillar Foundation e International Youth Foundation) ofrece a estudiantes latinoamericanos aprendizaje basado en proyectos para desarrollar pensamiento crítico, trabajo en equipo y persistencia.</li>
+<li>India lanzó <em>Skill India Digital</em> para centralizar la formación del país; el Banco Mundial reunió a 20 naciones en Nueva Delhi para compartir prácticas educativas.</li>
+</ul>
+<p>Las certificaciones aparecen como alternativa a la educación formal para cubrir roles calificados, incluida la gestión de proyectos.</p>`,
+links:["m1","ad","sk"]},
+
+ad:{kind:"Dato clave · 2.1",cls:"m1",page:"p. 8",html:`
+<div class="stats"><div class="stat"><b>1/4</b><span>de la humanidad será africana en 2050</span></div>
+<div class="stat"><b>1/3</b><span>de los jóvenes de 15 a 24 años vivirá en África</span></div></div>
+<p>La proyección es de las Naciones Unidas. América Latina tiene la segunda mayor proporción de adultos jóvenes después de África, e India, hoy el país más poblado, tiene más de una cuarta parte de su población entre los 10 y los 20 años.</p>
+<p>El informe advierte que <strong>no formar a esos jóvenes para un mercado cada vez más tecnológico podría ser desestabilizador</strong>. Por eso este dato desemboca en la necesidad de desarrollar habilidades para el futuro.</p>`,
+links:["a","sk"]},
+
+b:{kind:"Subtema · 2.1",cls:"m1",page:"pp. 8–9",html:`
+<p>Ante el envejecimiento hay dos complementos principales: <strong>la automatización y la migración</strong>.</p>
+<h3>Robots y automatización</h3>
+<ul><li>Un estudio citado por el informe encontró que el envejecimiento de la fuerza laboral es uno de los principales motores de la adopción de robots.</li>
+<li>Alemania planea complementar su fuerza laboral con robots; Japón los usa desde hace años en construcción, alimentos y bebidas, y salud.</li>
+<li>A medida que los proyectos se digitalizan, las personas necesitan reforzar habilidades como resolución de problemas, negociación y comunicación.</li></ul>
+<blockquote>«En última instancia, el objetivo de integrar robots en el lugar de trabajo es aumentar las capacidades humanas, no reemplazarlas».<cite>Cagri Pehlivan, CEO de Robot4Work</cite></blockquote>
+<h3>Migración</h3>
+<ul><li>Estados Unidos ha sostenido un crecimiento poblacional modesto gracias a la inmigración, lo que favorece el crecimiento económico y ayuda a contener la inflación.</li>
+<li>Japón flexibilizó sus reglas migratorias en 2019 para atraer trabajadores calificados, pero la pandemia limitó el éxito del programa.</li></ul>`,
+links:["m1","bd","sk"]},
+
+bd:{kind:"Dato clave · 2.1",cls:"m1",page:"p. 8",html:`
+<div class="stats"><div class="stat"><b>≈150 M</b><span>empleos pasarán a trabajadores de 55 años o más hacia el final de esta década</span></div></div>
+<p>Además, para 2050 las personas de 65 años o más superarán en número a los adolescentes y jóvenes de 15 a 24 años. Es un cambio en la composición de quienes trabajan, no solo en cuántos son.</p>
+<p>Este dato conecta con la necesidad de <strong>recapacitar a trabajadores mayores</strong> y de diseñar tecnología que los complemente.</p>`,
+links:["b","sk"]},
+
+c:{kind:"Subtema · 2.1",cls:"m1",page:"p. 9",html:`
+<p>La idea central del subtema es que <strong>la capacidad de aprender durante toda la vida laboral importa más que cualquier habilidad puntual</strong>.</p>
+<blockquote>«Las habilidades técnicas específicas, como programar, quedan obsoletas rápidamente por el avance tecnológico. […] Las habilidades que necesitarán los estudiantes son las del siglo XXI: pensamiento crítico, resolución de problemas, creatividad, trabajo en equipo y una muy importante, el aprendizaje permanente».<cite>Vered Holzmann, Academic College of Tel Aviv-Yaffo</cite></blockquote>
+<h3>Estrategias que menciona el informe</h3>
+<ul><li><strong>Recapacitar</strong> al personal en lugar de buscar perfiles nuevos, que escasean. Puede ser más rápido y económico, y la IA generativa permitiría personalizar la formación.</li>
+<li><strong>Formar a formadores</strong> con proveedores externos y luego escalar a toda la organización.</li>
+<li><strong>Rotación de puestos</strong> (<em>job swapping</em>): cambiar de rol o asumir proyectos cortos en otra ciudad. Lo usan McKinsey y Exact Sciences, y encaja especialmente con la gestión de proyectos.</li></ul>`,
+links:["m1","cd","sk"]},
+
+cd:{kind:"Dato clave · 2.1",cls:"m1",page:"p. 9",html:`
+<div class="stats"><div class="stat"><b>50 %</b><span>de las habilidades de su plantilla dejaría de ser relevante en dos años, según los directivos</span></div></div>
+<p>La causa que señalan es la IA generativa. Es un ejemplo contundente de por qué la recualificación debe ser constante.</p>
+<div class="note"><strong>Para leer con criterio</strong>Se trata de una <em>percepción</em> de directivos recogida en una encuesta, no de una medición del mercado laboral. Indica urgencia, pero conviene no tomarla como pronóstico exacto.</div>`,
+links:["c","sk"]},
+
+sk:{kind:"Concepto transversal",page:"p. 10 (y pp. 8–9)",html:`
+<p>Los tres datos de la megatendencia 2.1 conducen a la misma conclusión: hay que desarrollar <strong>habilidades para el futuro</strong>. El informe presenta estas cifras en la página 10, junto a la megatendencia 2.2, porque también afectan a la forma de trabajar.</p>
+<h3>Necesidad de nuevas habilidades (Foro Económico Mundial, 2023)</h3>
+<div class="stats">
+<div class="stat"><b>44 %</b><span>de las habilidades de los trabajadores se verá alterado en 5 años</span></div>
+<div class="stat"><b>60 %</b><span>de los trabajadores requerirá formación nueva hacia 2027</span></div>
+<div class="stat"><b>42 %</b><span>de las empresas priorizará habilidades en IA y big data</span></div>
+<div class="stat"><b>45 %</b><span>de las empresas ve eficaz la formación financiada por el gobierno</span></div></div>
+<h3>Habilidades verdes (LinkedIn, 2023)</h3>
+<div class="stats"><div class="stat"><b>+15 %</b><span>crecieron las vacantes que las piden</span></div>
+<div class="stat"><b>1 de 8</b><span>trabajadores las tiene</span></div></div>
+<h3>Habilidades en IA (PwC, 2024)</h3>
+<div class="stats"><div class="stat"><b>3,5×</b><span>crecieron más rápido las vacantes en IA que el promedio</span></div>
+<div class="stat"><b>25 %</b><span>más rápido cambian las habilidades exigidas en ocupaciones expuestas a IA</span></div>
+<div class="stat"><b>hasta 25 %</b><span>de prima salarial en empleos que piden IA</span></div></div>
+<h3>Power skills más demandadas en 2024 (LinkedIn)</h3>
+<p>N.º 1 comunicación, n.º 2 liderazgo, n.º 7 trabajo en equipo y n.º 9 resolución de problemas. La habilidad «del momento» es la <strong>adaptabilidad</strong>.</p>
+<div class="note"><strong>Para leer con criterio</strong>Las cifras vienen de fuentes distintas, con metodologías y muestras diferentes. Sirven para ver la tendencia, pero no deben sumarse ni compararse entre sí directamente.</div>`,
+links:["ad","bd","cd","m2"]},
+
+d:{kind:"Subtema · 2.2",cls:"m2",page:"p. 10",html:`
+<p>La flexibilidad sigue en negociación. El estudio <em>State of Hybrid Work 2023</em> de Owl Labs encontró un <strong>desajuste entre lo que piden los empleadores y lo que quieren los empleados</strong>, y casi un tercio de los trabajadores dijo que buscaría otro empleo por esa diferencia.</p>
+<p>El informe del PMI <em>Pulse of the Profession 2024</em> encontró que los empleados, más que los altos directivos, consideran el trabajo remoto igual o más eficaz que el presencial. Lo más relevante es que las organizaciones <strong>pueden dar flexibilidad sin afectar la ejecución ni el desempeño de los proyectos</strong>.</p>
+<p>A cambio, deben crear formas de colaboración significativas y espacios para reunirse: aprendizaje, almuerzos de celebración y reconocimiento.</p>
+<h3>Ejemplo</h3>
+<p>Janice Hsu, de la lista PMI Future 50, fundó Eslitec, una startup que crea chatbots para agricultores en Taiwán. Sin inversión externa y sin poder pagar salarios altos, ofrece tiempo libre y flexibilidad: su equipo es totalmente remoto y no trabaja horas extra.</p>`,
+links:["m2","dd","pm"]},
+
+dd:{kind:"Dato clave · 2.2",cls:"m2",page:"p. 10",html:`
+<div class="stats"><div class="stat"><b>66 %</b><span>presencialidad que prefieren los empleadores</span></div>
+<div class="stat"><b>22 %</b><span>presencialidad que prefieren los empleados</span></div>
+<div class="stat"><b>≈1/3</b><span>buscaría otro empleo por ese desajuste</span></div></div>
+<p>La brecha de 44 puntos explica por qué la modalidad de trabajo es hoy un factor de retención. En un mercado laboral estrecho, imponer la presencialidad tiene un costo en talento.</p>`,
+links:["d","pm"]},
+
+e:{kind:"Subtema · 2.2",cls:"m2",page:"p. 11",html:`
+<p>Al pensar en el futuro del trabajo no conviene subestimar la felicidad. El problema es que <strong>la felicidad de los jóvenes está disminuyendo</strong>, lo que amenaza la productividad de la fuerza laboral de mañana.</p>
+<h3>Tres amenazas a la felicidad</h3>
+<ul>
+<li><strong>Inseguridad económica:</strong> 3 de cada 10 millennials y Gen Z no se sienten seguros financieramente, y el desempleo juvenil (15–24) triplica al de los adultos de 25 años o más.</li>
+<li><strong>Sentimientos de insuficiencia y soledad:</strong> el 27 % de los jóvenes de 19 a 29 años se siente bastante o muy solo, la cifra más alta de cualquier grupo de edad; en el Reino Unido, el 48 % de los jóvenes solos dice que eso le quita ganas de progresar en el trabajo.</li>
+<li><strong>Ansiedad por los acontecimientos mundiales:</strong> el 75 % de los jóvenes de 16 a 25 años cree que el cambio climático hace aterrador el futuro, y 468 millones de niños viven en zonas afectadas por conflictos armados.</li></ul>
+<h3>Respuestas propuestas</h3>
+<ul><li>Educación para los empleos del futuro, mentoría, habilidades para la vida, educación financiera y fondos para jóvenes emprendedores. Ejemplo: HEART/NSTA (Jamaica) con Studica (Canadá) en un campamento de robótica.</li>
+<li>Apoyo en salud mental, grupos de afinidad profesional y proyectos con impacto social que reduzcan el aislamiento del trabajo remoto.</li></ul>
+<div class="note"><strong>Para leer con criterio</strong>El informe atribuye el <em>World Happiness Report</em> al Foro Económico Mundial. Según la información disponible, ese informe lo publica el Wellbeing Research Centre de la Universidad de Oxford junto con Gallup y la Red de Soluciones para el Desarrollo Sostenible de la ONU (SDSN). El WEF lo ha difundido, pero no es su autor.</div>`,
+links:["m2","ed","pm"]},
+
+ed:{kind:"Dato clave · 2.2",cls:"m2",page:"p. 11",html:`
+<div class="stats"><div class="stat"><b>+12 %</b><span>de productividad por cada unidad adicional de felicidad</span></div></div>
+<p>El informe usa este dato para argumentar que el bienestar no es un lujo, sino un factor de desempeño.</p>
+<div class="note"><strong>Para leer con criterio</strong>Esta cifra suele asociarse a los experimentos de Oswald, Proto y Sgroi (2015, <em>Journal of Labor Economics</em>), en los que personas a quienes se les inducía felicidad resolvían más tareas en laboratorio, alrededor de un 12 % más. Es una evidencia sólida, pero obtenida en tareas controladas y breves, así que extrapolarla a una empresa real exige cautela. El informe no detalla la fuente exacta, por lo que no puedo confirmar que se refiera a ese estudio.</div>`,
+links:["e","pm"]},
+
+f:{kind:"Subtema · 2.2",cls:"m2",page:"p. 12",html:`
+<p>Todos participan en la construcción de la cultura organizacional. Desde el informe anterior, las iniciativas de <strong>diversidad, equidad e inclusión (DEI)</strong> han recibido críticas, por la percepción de amenaza al estatus y por la dificultad de ver su retorno financiero a largo plazo.</p>
+<p>Surgen modelos que van más allá de contar perfiles, como el <em>inclusion score</em>, un estándar de gestión de personas desarrollado por James Felton Keith.</p>
+<p>Holzmann y la futurista Tameka Vasquez coinciden en que los jóvenes <strong>exigen cambios y buscan puestos donde puedan tener impacto social</strong>.</p>
+<blockquote>«Si tienes un equipo diverso, con personas de distintos orígenes, ese equipo será más eficaz. Producirá mejores resultados, será más innovador y más creativo».<cite>Vered Holzmann</cite></blockquote>
+<blockquote>«La única forma de abordar los grandes desafíos es la colaboración. […] Lo llamo ecosistema, porque debemos ver la complejidad y la interdependencia».<cite>Vered Holzmann</cite></blockquote>
+<div class="note"><strong>Para leer con criterio</strong>El informe dice que la diversidad <em>se correlaciona</em> con mejores resultados de proyecto. Correlación no es causalidad: la literatura académica muestra que los beneficios dependen de que exista inclusión real y buena gestión de los conflictos. Un equipo diverso mal gestionado puede rendir peor.</div>`,
+links:["m2","fd","pm"]},
+
+fd:{kind:"Dato clave · 2.2",cls:"m2",page:"p. 12",html:`
+<div class="stats"><div class="stat"><b>89 %</b><span>de los millennials dice que el propósito es clave para su satisfacción laboral</span></div>
+<div class="stat"><b>86 %</b><span>de la generación Z dice lo mismo</span></div></div>
+<p>Para atraer a las nuevas generaciones no basta con el salario: buscan propósito e impacto social. Esto conecta la diversidad y la cultura con la retención de talento.</p>`,
+links:["f","pm"]},
+
+pm:{kind:"Concepto transversal · síntesis",page:"pp. 7 y 10–12",html:`
+<p>El informe insiste en que <strong>el cambio se ejecuta a través de proyectos</strong> y en que su guía debe ser el impacto en las personas. A partir de la sección, estas son las implicaciones para quien dirige proyectos:</p>
+<ul>
+<li><strong>Flexibilidad con resultados:</strong> se puede ofrecer trabajo remoto o híbrido sin perjudicar el desempeño del proyecto, siempre que existan espacios de colaboración y reconocimiento.</li>
+<li><strong>Bienestar como factor de productividad:</strong> atender la seguridad económica, la soledad y la ansiedad de los equipos jóvenes.</li>
+<li><strong>Equipos diversos e inclusivos:</strong> se asocian con más innovación y con que los directores de proyecto se sientan más conectados y valorados.</li>
+<li><strong>Propósito:</strong> los proyectos con impacto social atraen y retienen a las nuevas generaciones.</li>
+<li><strong>Aprendizaje continuo:</strong> la rotación de puestos y la formación de formadores encajan con la naturaleza temporal de los proyectos.</li>
+</ul>
+<div class="note"><strong>Aclaración</strong>Este nodo es una síntesis elaborada para el mapa a partir de las ideas del informe; no es un apartado con ese título dentro del documento.</div>`,
+links:["root","d","e","f"]}
+};
+
+const TOUR = ["root","ctx","m1","a","ad","b","bd","c","cd","sk","m2","d","dd","e","ed","f","fd","pm"];
+
+/* ---------- Dibujo ---------- */
+const svg = document.getElementById("map");
+const gEdges = el("g"), gLabels = el("g"), gNodes = el("g");
+svg.append(gEdges,gLabels,gNodes);
+function el(t,a){const e=document.createElementNS(NS,t);if(a)for(const k in a)e.setAttribute(k,a[k]);return e}
+
+const edgeEls=[];
+E.forEach(([f,t,label,kind])=>{
+  const A=byId[f],B=byId[t];let d,mx,my;
+  if(kind==="h"){const x1=A.x+A.w/2,x2=B.x-B.w/2;d=`M${x1} ${A.y} L${x2} ${B.y}`;mx=(x1+x2)/2;my=A.y-12;}
+  else{const x1=A.x,y1=A.y+A.h/2,x2=B.x,y2=B.y-B.h/2,cy=(y1+y2)/2;d=`M${x1} ${y1} C${x1} ${cy},${x2} ${cy},${x2} ${y2}`;mx=(x1+x2)/2;my=cy;}
+  const branch = (A.b!=="all"?A.b:B.b);
+  const p=el("path",{d,class:"edge"+(kind==="x"?" cross":"")+" b-"+branch});
+  gEdges.append(p);
+  const lg=el("g",{class:"elabel b-"+branch});
+  const tw=label.length*6.4+10;
+  lg.append(el("rect",{x:mx-tw/2,y:my-8,width:tw,height:16,rx:4}));
+  const tx=el("text",{x:mx,y:my+3.5,"text-anchor":"middle"});tx.textContent=label;lg.append(tx);
+  gLabels.append(lg);
+  edgeEls.push({f,t,p,lg});
+});
+
+const nodeEls={};
+N.forEach(n=>{
+  const cls=["node","n-"+n.type,"b-"+n.b];if(n.b!=="all")cls.push(n.b);
+  const g=el("g",{class:cls.join(" "),tabindex:"0",role:"button","data-id":n.id,"aria-label":n.lines.join(" ")});
+  const r = n.type==="root"?14:(n.type==="data"?10:(n.type==="mega"?12:10));
+  g.append(el("rect",{x:n.x-n.w/2,y:n.y-n.h/2,width:n.w,height:n.h,rx:r}));
+  const two = (n.type==="mega"||n.type==="cross");
+  const lh = n.type==="root"?23:(n.type==="data"?16:(two?20:17));
+  const total=(n.lines.length-1)*lh;
+  n.lines.forEach((s,i)=>{
+    const t=el("text",{x:n.x,y:n.y-total/2+i*lh+(two&&i===0?-1:0),"text-anchor":"middle","dominant-baseline":"middle"});
+    if(two)t.setAttribute("class",i===0?"t1":"t2");
+    t.textContent=s;g.append(t);
+  });
+  g.addEventListener("click",()=>select(n.id));
+  g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();select(n.id)}});
+  gNodes.append(g);nodeEls[n.id]=g;
+});
+
+/* ---------- Interacción ---------- */
+const panel=document.getElementById("panel"), stepEl=document.getElementById("step");
+let current="root";
+
+function nameOf(id){const n=byId[id];return n.type==="mega"||n.type==="cross"?n.lines[0]:n.lines.join(" ")}
+
+function select(id,fromTour){
+  current=id;
+  svg.classList.add("focusing");
+  Object.values(nodeEls).forEach(g=>g.classList.remove("active","near"));
+  nodeEls[id].classList.add("active");
+  edgeEls.forEach(o=>{
+    const on=o.f===id||o.t===id;
+    o.p.classList.toggle("near",on);o.lg.classList.toggle("near",on);
+    if(on){nodeEls[o.f].classList.add("near");nodeEls[o.t].classList.add("near");}
+  });
+  const c=C[id];
+  const props = edgeEls.filter(o=>o.f===id||o.t===id).map(o=>{
+    const lab=E.find(e=>e[0]===o.f&&e[1]===o.t)[2];
+    return `<li>${nameOf(o.f)} <em>→ ${lab} →</em> ${nameOf(o.t)}</li>`}).join("");
+  panel.innerHTML=`<article>
+    <span class="kind ${c.cls||""}">${c.kind}</span>
+    <h2>${nameOf(id)}</h2>
+    <p class="page">Global Megatrends 2024 · ${c.page}</p>
+    ${c.html}
+    <h3>Proposiciones del mapa</h3><ul>${props}</ul>
+    <h3>Explorar conceptos relacionados</h3>
+    <div class="links">${c.links.map(l=>`<button type="button" data-go="${l}">${nameOf(l)}</button>`).join("")}</div>
+  </article>`;
+  panel.scrollTop=0;
+  const i=TOUR.indexOf(id);stepEl.textContent=(i+1)+" / "+TOUR.length;
+  try{localStorage.setItem("people-map-node",id)}catch(e){}
+}
+panel.addEventListener("click",e=>{const b=e.target.closest("[data-go]");if(b){select(b.dataset.go);nodeEls[b.dataset.go].focus({preventScroll:true})}});
+
+function move(d){const i=TOUR.indexOf(current);const n=TOUR[(i+d+TOUR.length)%TOUR.length];select(n,true);}
+document.getElementById("prev").addEventListener("click",()=>move(-1));
+document.getElementById("next").addEventListener("click",()=>move(1));
+document.addEventListener("keydown",e=>{
+  if(e.target.closest("button")&&!e.target.closest(".node"))return;
+  if(e.key==="ArrowRight")move(1); if(e.key==="ArrowLeft")move(-1);
+});
+
+document.querySelectorAll(".flt").forEach(b=>b.addEventListener("click",()=>{
+  document.querySelectorAll(".flt").forEach(x=>x.setAttribute("aria-pressed",x===b?"true":"false"));
+  svg.classList.remove("filter-m1","filter-m2");
+  if(b.dataset.f!=="all")svg.classList.add("filter-"+b.dataset.f);
+  if(b.dataset.f==="m1")select("m1"); else if(b.dataset.f==="m2")select("m2");
+}));
+
+/* ---------- Zoom y desplazamiento ---------- */
+const W=1200,H=780,MIN=1,MAX=4;
+let vb={x:0,y:0,w:W,h:H}, dragMoved=false;
+const zval=document.getElementById("zval");
+function scale(){return W/vb.w}
+function apply(){
+  vb.w=Math.min(W,Math.max(W/MAX,vb.w)); vb.h=vb.w*H/W;
+  vb.x=Math.min(W-vb.w,Math.max(0,vb.x)); vb.y=Math.min(H-vb.h,Math.max(0,vb.y));
+  svg.setAttribute("viewBox",`${vb.x} ${vb.y} ${vb.w} ${vb.h}`);
+  const s=scale(); zval.textContent=Math.round(s*100)+" %";
+  svg.classList.toggle("zoomed",s>1.001);
+}
+function toSvg(cx,cy){const r=svg.getBoundingClientRect();return{x:vb.x+(cx-r.left)/r.width*vb.w,y:vb.y+(cy-r.top)/r.height*vb.h}}
+function zoomAt(factor,px,py){ // px,py en coordenadas SVG
+  const nw=Math.min(W,Math.max(W/MAX,vb.w/factor)); const k=nw/vb.w;
+  vb.x=px-(px-vb.x)*k; vb.y=py-(py-vb.y)*k; vb.w=nw; apply();
+}
+function center(){return{x:vb.x+vb.w/2,y:vb.y+vb.h/2}}
+document.getElementById("zin").addEventListener("click",()=>{const c=center();zoomAt(1.4,c.x,c.y)});
+document.getElementById("zout").addEventListener("click",()=>{const c=center();zoomAt(1/1.4,c.x,c.y)});
+document.getElementById("zreset").addEventListener("click",()=>{vb={x:0,y:0,w:W,h:H};apply()});
+document.getElementById("zfull").addEventListener("click",()=>{
+  const fig=document.querySelector("figure.map");
+  try{ if(document.fullscreenElement){document.exitFullscreen()} else {const p=fig.requestFullscreen&&fig.requestFullscreen(); if(p&&p.catch)p.catch(()=>{});} }catch(e){}
+});
+svg.addEventListener("wheel",e=>{
+  if(!(e.ctrlKey||e.metaKey||scale()>1.001))return; // sin Ctrl y sin zoom: la página se desplaza normal
+  e.preventDefault();
+  if(e.ctrlKey||e.metaKey){const p=toSvg(e.clientX,e.clientY);zoomAt(Math.exp(-e.deltaY*0.0025),p.x,p.y);}
+  else{const r=svg.getBoundingClientRect();vb.x+=e.deltaX*vb.w/r.width;vb.y+=e.deltaY*vb.h/r.height;apply();}
+},{passive:false});
+
+/* Arrastre (ratón y un dedo) y pellizco (dos dedos) */
+const pts=new Map(); let last=null, pinch=null;
+svg.addEventListener("pointerdown",e=>{
+  pts.set(e.pointerId,{x:e.clientX,y:e.clientY}); dragMoved=false;
+  if(pts.size===1){last={x:e.clientX,y:e.clientY}}
+  if(pts.size===2){const [a,b]=[...pts.values()];pinch={d:Math.hypot(a.x-b.x,a.y-b.y)};}
+});
+svg.addEventListener("pointermove",e=>{
+  if(!pts.has(e.pointerId))return;
+  pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pts.size===2&&pinch){
+    const [a,b]=[...pts.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);
+    const m=toSvg((a.x+b.x)/2,(a.y+b.y)/2); zoomAt(d/pinch.d,m.x,m.y); pinch.d=d; dragMoved=true; return;
+  }
+  if(pts.size===1&&last&&scale()>1.001){
+    const dx=e.clientX-last.x,dy=e.clientY-last.y;
+    if(!dragMoved&&Math.hypot(dx,dy)<5)return;
+    if(!dragMoved){dragMoved=true;try{svg.setPointerCapture(e.pointerId)}catch(_){} svg.classList.add("dragging");}
+    const r=svg.getBoundingClientRect(); vb.x-=dx*vb.w/r.width; vb.y-=dy*vb.h/r.height; last={x:e.clientX,y:e.clientY}; apply();
+  }
+});
+function endPtr(e){pts.delete(e.pointerId); if(pts.size<2)pinch=null; if(pts.size===0){last=null;svg.classList.remove("dragging")} else {const v=[...pts.values()][0];last={x:v.x,y:v.y}}}
+svg.addEventListener("pointerup",endPtr); svg.addEventListener("pointercancel",endPtr);
+// evita que un arrastre se interprete como clic en un nodo
+svg.addEventListener("click",e=>{if(dragMoved){e.stopPropagation();e.preventDefault();dragMoved=false}},true);
+// el nodo seleccionado con teclado o recorrido se centra si está fuera de vista
+const _select=select;
+select=function(id,t){_select(id,t); if(scale()>1.001){const n=byId[id]; if(n.x<vb.x||n.x>vb.x+vb.w||n.y<vb.y||n.y>vb.y+vb.h){vb.x=n.x-vb.w/2;vb.y=n.y-vb.h/2;apply();}}};
+apply();
+
+let start="root";try{const s=localStorage.getItem("people-map-node");if(s&&byId[s])start=s}catch(e){}
+select(start);
+})();
+</script>
+
+</body>
+</html>
